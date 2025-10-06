@@ -28,13 +28,25 @@ Durante esta prueba trabajarás con un conjunto de datos que simula nuestro ento
 ## 📁 Estructura del Repositorio
 
 ```
-farmatodo_de_test/
-├── resources/               # Recursos y pipelines
-│   └── farmatodo_de_test_pipeline/
-│       ├── explorations/   # Notebooks de exploración
-│       └── transformations/# Transformaciones SQL/PySpark
-├── databricks.yml          # Configuración de Databricks
-└── README.md              # Instrucciones detalladas del test
+.
+├── README.md                    # Este archivo
+├── farmatodo_da_test/          # Materiales de prueba para Analista de Datos
+│   ├── README.md               # Instrucciones detalladas del test
+│   ├── data/                   # Conjuntos de datos de muestra
+│   │   ├── bronze/             # Capa de datos crudos
+│   │   ├── silver/             # Capa de datos procesados
+│   │   └── gold/               # Datos listos para negocio
+│   ├── notebooks/              # Notebooks de Jupyter/Databricks
+│   │   ├── 01_exploracion_datos.ipynb
+│   │   ├── 02_transformacion_datos.ipynb
+│   │   └── 03_analisis_datos.ipynb
+│   ├── sql/                    # Consultas y scripts SQL
+│   │   ├── dashboard_queries.sql
+│   │   └── consultas_analiticas/
+│   └── soluciones/             # Soluciones de referencia (acceso restringido)
+├── farmatodo_de_test/          # Materiales de prueba para Ingeniero de Datos
+├── cloud_infra/                # Infraestructura como Código
+└── db_secrets/                 # Gestión de secretos de Databricks
 ```
 
 ## 📚 Prerrequisitos
@@ -50,7 +62,7 @@ farmatodo_de_test/
 
 1. **Haz un fork** de este repositorio en tu cuenta de GitHub
 2. **Clona el repositorio** en tu workspace de Databricks
-3. **Sigue las instrucciones** detalladas en [`farmatodo_de_test/README.md`](./farmatodo_de_test/README.md)
+3. **Sigue las instrucciones** detalladas en [`farmatodo_de_test/README.md`](./farmatodo_de_test/README.md) o [`farmatodo_da_test/README.md`](./farmatodo_da_test/README.md)
 4. **Completa las tareas** en los notebooks proporcionados
 5. **Haz commit y push** de tus cambios a tu fork
 6. **Envíanos el enlace** a tu repositorio cuando hayas terminado
