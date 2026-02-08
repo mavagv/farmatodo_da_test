@@ -1,0 +1,2402 @@
+{
+  "datasets": [
+    {
+      "name": "6efa5ddc",
+      "displayName": "KPIs Principales",
+      "queryLines": [
+        "SELECT\r\n",
+        "    CAST(BUSINESS_DATE AS DATE) AS BUSINESS_DATE,\r\n",
+        "    date_format(CAST(BUSINESS_DATE AS DATE), 'dd-MM-yyyy') AS BUSINESS_DATE_FMT,\r\n",
+        "    STORE_REGION,\r\n",
+        "    STORE_FORMAT,\r\n",
+        "    CURRENCY,\r\n",
+        "    PRODUCT_CODE,\r\n",
+        "    PRODUCT_DESC,\r\n",
+        "    PRODUCT_DEPARTMENT,\r\n",
+        "    PRODUCT_CLASS,\r\n",
+        "    SUPPLIER_NAME,\r\n",
+        "    CHANNEL_NAME,\r\n",
+        "    STORE_ID,\r\n",
+        "    STORE_NAME,\r\n",
+        "    STORE_CITY,\r\n",
+        "    TOTAL_SALE_TAX,\r\n",
+        "    GROSS_MARGIN,\r\n",
+        "    PCT_GROSS_MARGIN,\r\n",
+        "    TOTAL_TRANSACTIONS,\r\n",
+        "    AVG_TICKET,\r\n",
+        "    TOTAL_UNITS\r\n",
+        "FROM workspace.operations.gold_sales_daily_summary\r\n",
+        "\r\n"
+      ]
+    },
+    {
+      "name": "cd9572b5",
+      "displayName": "Ventas por dimensiones",
+      "queryLines": [
+        "SELECT\r\n",
+        "    CAST(BUSINESS_DATE AS DATE) AS BUSINESS_DATE,\r\n",
+        "    STORE_REGION,\r\n",
+        "    STORE_FORMAT,\r\n",
+        "    CURRENCY,\r\n",
+        "    PRODUCT_CODE,\r\n",
+        "   PRODUCT_DESC,\r\n",
+        "    PRODUCT_DEPARTMENT,\r\n",
+        "    PRODUCT_CLASS\r\n",
+        "    SUPPLIER_NAME,\r\n",
+        "    CHANNEL_NAME,\r\n",
+        "    STORE_ID,\r\n",
+        "    STORE_NAME,\r\n",
+        "    STORE_CITY,\r\n",
+        "    GROSS_MARGIN,\r\n",
+        "    PCT_GROSS_MARGIN,\r\n",
+        "    TOTAL_SALE_TAX\r\n",
+        "FROM workspace.operations.gold_sales_daily_summary\r\n"
+      ]
+    },
+    {
+      "name": "924cc311",
+      "displayName": "Top 10 productos",
+      "queryLines": [
+        "SELECT \r\n",
+        "    s.PRODUCT_DESC,\r\n",
+        "    SUM(s.TOTAL_SALE_TAX) AS TOTAL_SALE_TAX\r\n",
+        "FROM workspace.operations.gold_sales_daily_summary s\r\n",
+        "JOIN workspace.operations.gold_dim_product p\r\n",
+        "    ON s.PRODUCT_CODE = p.ITEM  -- o el campo que haga match entre ventas y productos\r\n",
+        "WHERE \r\n",
+        "    (ARRAY_SIZE(:region) = 0 OR array_contains(:region, s.STORE_REGION))\r\n",
+        "    AND (ARRAY_SIZE(:format) = 0 OR array_contains(:format, s.STORE_FORMAT))\r\n",
+        "    AND (ARRAY_SIZE(:currency) = 0 OR array_contains(:currency, s.CURRENCY))\r\n",
+        "    AND (s.BUSINESS_DATE >= :fecha.min AND s.BUSINESS_DATE <= :fecha.max)\r\n",
+        "    AND p.STATUS = 'A'   -- FILTRO NUEVO: solo productos activos\r\n",
+        "GROUP BY 1\r\n",
+        "ORDER BY TOTAL_SALE_TAX DESC\r\n",
+        "LIMIT 10;\r\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "region",
+          "keyword": "region",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "Centro"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "format",
+          "keyword": "format",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "Express"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "currency",
+          "keyword": "currency",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "USD"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "fecha",
+          "keyword": "fecha",
+          "dataType": "DATE",
+          "complexType": "RANGE",
+          "defaultSelection": {
+            "range": {
+              "dataType": "DATE",
+              "min": {
+                "value": "2025-07-01T00:00:00.000"
+              },
+              "max": {
+                "value": "2025-09-30T00:00:00.000"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6cb1963d",
+      "displayName": "Top 10 de tiendas",
+      "queryLines": [
+        "SELECT \r\n",
+        "    s.STORE_NAME,\r\n",
+        "    s.STORE_CITY,\r\n",
+        "    SUM(s.TOTAL_SALE_TAX)/1000 AS TOTAL_SALE_TAX,\r\n",
+        "    SUM(s.GROSS_MARGIN)/1000 AS GROSS_MARGIN,     \r\n",
+        "    AVG(s.PCT_GROSS_MARGIN) AS PCT_MARGIN     \r\n",
+        "FROM workspace.operations.gold_sales_daily_summary s\r\n",
+        "JOIN workspace.operations.gold_dim_organization o\r\n",
+        "    ON s.STORE_ID = o.STORE_ID  -- unimos por el ID de la tienda\r\n",
+        "WHERE \r\n",
+        "    (ARRAY_SIZE(:region) = 0 OR array_contains(:region, s.STORE_REGION))\r\n",
+        "    AND (ARRAY_SIZE(:format) = 0 OR array_contains(:format, s.STORE_FORMAT))\r\n",
+        "    AND (ARRAY_SIZE(:currency) = 0 OR array_contains(:currency, s.CURRENCY))\r\n",
+        "    AND (s.BUSINESS_DATE >= :fecha.min AND s.BUSINESS_DATE <= :fecha.max)\r\n",
+        "    AND o.STORE_ACTIVE = 'Y'  -- FILTRO NUEVO: solo tiendas activas\r\n",
+        "GROUP BY \r\n",
+        "    s.STORE_NAME, \r\n",
+        "    s.STORE_CITY\r\n",
+        "ORDER BY TOTAL_SALE_TAX DESC\r\n",
+        "LIMIT 10;\r\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "region",
+          "keyword": "region",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "Centro"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "format",
+          "keyword": "format",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "Express"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "currency",
+          "keyword": "currency",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "USD"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "fecha",
+          "keyword": "fecha",
+          "dataType": "DATE",
+          "complexType": "RANGE",
+          "defaultSelection": {
+            "range": {
+              "dataType": "DATE",
+              "min": {
+                "value": "2025-07-01T00:00:00.000"
+              },
+              "max": {
+                "value": "2025-09-30T00:00:00.000"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10b834de",
+      "displayName": "Top 5 proveedores",
+      "queryLines": [
+        "SELECT \r\n",
+        "    s.SUPPLIER_NAME,\r\n",
+        "    SUM(s.TOTAL_SALE_TAX) AS TOTAL_SALE_TAX\r\n",
+        "FROM workspace.operations.gold_sales_daily_summary s\r\n",
+        "JOIN workspace.operations.gold_dim_supplier sup\r\n",
+        "    ON s.SUPPLIER_NAME = sup.SUP_NAME  -- o usar s.SUPPLIER = sup.SUPPLIER si coincide mejor\r\n",
+        "WHERE \r\n",
+        "    (ARRAY_SIZE(:region) = 0 OR array_contains(:region, s.STORE_REGION))\r\n",
+        "    AND (ARRAY_SIZE(:format) = 0 OR array_contains(:format, s.STORE_FORMAT))\r\n",
+        "    AND (ARRAY_SIZE(:currency) = 0 OR array_contains(:currency, s.CURRENCY))\r\n",
+        "    AND (s.BUSINESS_DATE >= :fecha.min AND s.BUSINESS_DATE <= :fecha.max)\r\n",
+        "    AND sup.SUP_STATUS = 'A'  -- FILTRO NUEVO: solo proveedores activos\r\n",
+        "GROUP BY 1\r\n",
+        "ORDER BY TOTAL_SALE_TAX DESC\r\n",
+        "LIMIT 5;\r\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "region",
+          "keyword": "region",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "Centro"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "format",
+          "keyword": "format",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "Plus"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "currency",
+          "keyword": "currency",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "USD"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "fecha",
+          "keyword": "fecha",
+          "dataType": "DATE",
+          "complexType": "RANGE",
+          "defaultSelection": {
+            "range": {
+              "dataType": "DATE",
+              "min": {
+                "value": "2025-07-01T00:00:00.000"
+              },
+              "max": {
+                "value": "2025-09-30T00:00:00.000"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "c09917e9",
+      "displayName": "Ventas",
+      "layout": [
+        {
+          "widget": {
+            "name": "total-ventas",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6efa5ddc",
+                  "fields": [
+                    {
+                      "name": "sum(TOTAL_SALE_TAX)",
+                      "expression": "SUM(`TOTAL_SALE_TAX`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "showDescription": false,
+                "title": "Total Ventas",
+                "description": "Total Ventas",
+                "headerAlignment": "center"
+              },
+              "style": {
+                "fontColor": {
+                  "light": "#FFFFFF"
+                }
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(TOTAL_SALE_TAX)",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  },
+                  "style": {
+                    "fontSize": 20,
+                    "bold": true,
+                    "color": {
+                      "themeColorType": "canvasBackgroundColor"
+                    }
+                  }
+                }
+              }
+            },
+            "specExtensions": {
+              "widgetBackgroundColor": {
+                "light": "#1E90FF"
+              },
+              "widgetBorderColor": {
+                "light": "#1E90FF"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "b7c08421",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6efa5ddc",
+                  "fields": [
+                    {
+                      "name": "sum(GROSS_MARGIN)",
+                      "expression": "SUM(`GROSS_MARGIN`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "showDescription": false,
+                "title": "Margen Bruto Total",
+                "description": "Gross Margin Total",
+                "headerAlignment": "center"
+              },
+              "style": {
+                "fontColor": {
+                  "light": "#FFFFFF"
+                }
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(GROSS_MARGIN)",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  },
+                  "style": {
+                    "fontSize": 20,
+                    "bold": true,
+                    "color": {
+                      "themeColorType": "canvasBackgroundColor"
+                    }
+                  }
+                }
+              }
+            },
+            "specExtensions": {
+              "widgetBackgroundColor": {
+                "light": "#32CD32"
+              },
+              "widgetBorderColor": {
+                "light": "#32CD32"
+              }
+            }
+          },
+          "position": {
+            "x": 1,
+            "y": 0,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "41fb6d02",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6efa5ddc",
+                  "fields": [
+                    {
+                      "name": "avg(PCT_GROSS_MARGIN)",
+                      "expression": "AVG(`PCT_GROSS_MARGIN`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "showDescription": false,
+                "title": "Margen Bruto Avg %",
+                "description": "Gross Margin Avg (%)",
+                "headerAlignment": "center"
+              },
+              "style": {
+                "fontColor": {
+                  "light": "#FFFFFF"
+                }
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "avg(PCT_GROSS_MARGIN)",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  },
+                  "style": {
+                    "fontSize": 20,
+                    "bold": true,
+                    "color": {
+                      "themeColorType": "canvasBackgroundColor"
+                    }
+                  }
+                }
+              }
+            },
+            "specExtensions": {
+              "widgetBackgroundColor": {
+                "light": "#D3D3D3"
+              },
+              "widgetBorderColor": {
+                "light": "#D3D3D3"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 0,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "0e27d3c1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6efa5ddc",
+                  "fields": [
+                    {
+                      "name": "sum(TOTAL_TRANSACTIONS)",
+                      "expression": "SUM(`TOTAL_TRANSACTIONS`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "showDescription": false,
+                "title": "Total Transac.",
+                "description": "Total Transaction",
+                "headerAlignment": "center"
+              },
+              "style": {
+                "fontColor": {
+                  "light": "#FFFFFF"
+                }
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(TOTAL_TRANSACTIONS)",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  },
+                  "style": {
+                    "fontSize": 20,
+                    "color": {
+                      "themeColorType": "canvasBackgroundColor"
+                    },
+                    "bold": true
+                  }
+                }
+              }
+            },
+            "specExtensions": {
+              "widgetBackgroundColor": {
+                "light": "#FFA500"
+              },
+              "widgetBorderColor": {
+                "light": "#FFA500"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 0,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "tendencia-ventas",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6efa5ddc",
+                  "fields": [
+                    {
+                      "name": "daily(BUSINESS_DATE)",
+                      "expression": "DATE_TRUNC(\"DAY\", `BUSINESS_DATE`)"
+                    },
+                    {
+                      "name": "sum(TOTAL_SALE_TAX)",
+                      "expression": "SUM(`TOTAL_SALE_TAX`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Tendencia de Ventas Diarias (M)"
+              },
+              "mark": {
+                "colors": [
+                  "#1E90FF",
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 2
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 3
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 4
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 5
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 6
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 7
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 8
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 9
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 10
+                  }
+                ],
+                "size": 0
+              },
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "daily(BUSINESS_DATE)",
+                  "axis": {
+                    "hideTitle": true
+                  },
+                  "displayName": "Fecha",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(TOTAL_SALE_TAX)",
+                  "axis": {
+                    "hideGrid": true,
+                    "hideLabels": false,
+                    "hideTitle": true
+                  },
+                  "displayName": "Total Ventas",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "label": {
+                  "show": false
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "ventas-totales-por-region",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6efa5ddc",
+                  "fields": [
+                    {
+                      "name": "STORE_REGION",
+                      "expression": "`STORE_REGION`"
+                    },
+                    {
+                      "name": "sum(TOTAL_SALE_TAX)",
+                      "expression": "SUM(`TOTAL_SALE_TAX`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Ventas totales por region (M)"
+              },
+              "mark": {
+                "colors": [
+                  "#32CD32",
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 2
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 3
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 4
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 5
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 6
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 7
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 8
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 9
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 10
+                  }
+                ]
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "STORE_REGION",
+                  "axis": {
+                    "hideTitle": true
+                  },
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "y-reversed"
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(TOTAL_SALE_TAX)",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  },
+                  "axis": {
+                    "hideTitle": true,
+                    "title": "Ventas totales"
+                  },
+                  "displayName": "Total Ventas",
+                  "scale": {
+                    "type": "quantitative",
+                    "reverse": false
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 2,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "2c721c60",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6efa5ddc",
+                  "fields": [
+                    {
+                      "name": "countdistinct(STORE_ID)",
+                      "expression": "COUNT(DISTINCT `STORE_ID`)"
+                    },
+                    {
+                      "name": "STORE_FORMAT",
+                      "expression": "`STORE_FORMAT`"
+                    },
+                    {
+                      "name": "sum(TOTAL_SALE_TAX)",
+                      "expression": "SUM(`TOTAL_SALE_TAX`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Desempeño por formato de tienda (M)"
+              },
+              "mark": {
+                "colors": [
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 1
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 2
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 3
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 4
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 5
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 6
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 7
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 8
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 9
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 10
+                  }
+                ]
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "STORE_FORMAT",
+                  "axis": {
+                    "hideTitle": true
+                  },
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "y-reversed"
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(TOTAL_SALE_TAX)",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  },
+                  "axis": {
+                    "hideTitle": true,
+                    "title": "Ventas totales"
+                  },
+                  "displayName": "Ventas totales",
+                  "scale": {
+                    "type": "quantitative",
+                    "reverse": false
+                  }
+                },
+                "label": {
+                  "show": true
+                },
+                "extra": [
+                  {
+                    "fieldName": "countdistinct(STORE_ID)",
+                    "displayName": "Nro. de tiendas"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 14,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "analisis-de-canales",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6efa5ddc",
+                  "fields": [
+                    {
+                      "name": "sum(TOTAL_SALE_TAX)",
+                      "expression": "SUM(`TOTAL_SALE_TAX`)"
+                    },
+                    {
+                      "name": "CHANNEL_NAME",
+                      "expression": "`CHANNEL_NAME`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Ventas por canal"
+              },
+              "widgetType": "pie",
+              "encodings": {
+                "angle": {
+                  "fieldName": "sum(TOTAL_SALE_TAX)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "hideTitle": true
+                  },
+                  "displayName": "Total de ventas"
+                },
+                "color": {
+                  "fieldName": "CHANNEL_NAME",
+                  "legend": {
+                    "position": "left",
+                    "hideTitle": true
+                  },
+                  "displayName": "Canal",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Call Center",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 3
+                        }
+                      },
+                      {
+                        "value": "E-Commerce",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 2
+                        }
+                      },
+                      {
+                        "value": "App Movil",
+                        "color": "#4682B4"
+                      }
+                    ]
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 8,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "analisis-de-moneda",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6efa5ddc",
+                  "fields": [
+                    {
+                      "name": "CURRENCY",
+                      "expression": "`CURRENCY`"
+                    },
+                    {
+                      "name": "weekly(BUSINESS_DATE)",
+                      "expression": "DATE_TRUNC(\"WEEK\", `BUSINESS_DATE`)"
+                    },
+                    {
+                      "name": "sum(TOTAL_SALE_TAX)",
+                      "expression": "SUM(`TOTAL_SALE_TAX`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Ventas semanales por moneda (M)"
+              },
+              "widgetType": "area",
+              "encodings": {
+                "x": {
+                  "fieldName": "weekly(BUSINESS_DATE)",
+                  "axis": {
+                    "hideTitle": true
+                  },
+                  "displayName": "Date",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(TOTAL_SALE_TAX)",
+                  "axis": {
+                    "hideTitle": true
+                  },
+                  "displayName": "Total Sales Tax",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "CURRENCY",
+                  "legend": {
+                    "hideTitle": false,
+                    "title": "Moneda"
+                  },
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "USD",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 3
+                        }
+                      },
+                      {
+                        "value": "VES",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 2
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 5,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "811a7ce7",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6efa5ddc",
+                  "fields": [
+                    {
+                      "name": "sum(TOTAL_UNITS)",
+                      "expression": "SUM(`TOTAL_UNITS`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "showDescription": false,
+                "title": "Unidades vendidas",
+                "description": "Unidades vendidas",
+                "headerAlignment": "center"
+              },
+              "style": {
+                "fontColor": {
+                  "light": "#FFFFFF"
+                }
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(TOTAL_UNITS)",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  },
+                  "style": {
+                    "fontSize": 20,
+                    "color": {
+                      "themeColorType": "canvasBackgroundColor"
+                    },
+                    "bold": true
+                  }
+                }
+              }
+            },
+            "specExtensions": {
+              "widgetBackgroundColor": {
+                "light": "#32CD32"
+              },
+              "widgetBorderColor": {
+                "light": "#32CD32"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 0,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "top-10-tiendas-con-mas-ventas-mm",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6cb1963d",
+                  "fields": [
+                    {
+                      "name": "STORE_NAME",
+                      "expression": "`STORE_NAME`"
+                    },
+                    {
+                      "name": "STORE_CITY",
+                      "expression": "`STORE_CITY`"
+                    },
+                    {
+                      "name": "TOTAL_SALE_TAX",
+                      "expression": "`TOTAL_SALE_TAX`"
+                    },
+                    {
+                      "name": "GROSS_MARGIN",
+                      "expression": "`GROSS_MARGIN`"
+                    },
+                    {
+                      "name": "PCT_MARGIN",
+                      "expression": "`PCT_MARGIN`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "invisibleColumns": [],
+              "allowHTMLByDefault": false,
+              "itemsPerPage": 10,
+              "paginationSize": "default",
+              "condensed": true,
+              "withRowNumber": true,
+              "frame": {
+                "showTitle": true,
+                "title": "Top 10 - Tiendas con más ventas (M)",
+                "headerAlignment": "center"
+              },
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "STORE_NAME",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100000,
+                    "title": "Tienda",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false,
+                    "cellFormat": {
+                      "default": {
+                        "foregroundColor": null
+                      },
+                      "rules": []
+                    }
+                  },
+                  {
+                    "fieldName": "STORE_CITY",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100001,
+                    "title": "Ciudad",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "TOTAL_SALE_TAX",
+                    "numberFormat": "0.0",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "float",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 100002,
+                    "title": "Ventas (M)",
+                    "allowSearch": false,
+                    "alignContent": "center",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "GROSS_MARGIN",
+                    "numberFormat": "0.0",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "float",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 100003,
+                    "title": "Margen Bruto",
+                    "allowSearch": false,
+                    "alignContent": "center",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "PCT_MARGIN",
+                    "numberFormat": "0.0",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "float",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 100004,
+                    "title": "% Margen",
+                    "allowSearch": false,
+                    "alignContent": "center",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  }
+                ]
+              }
+            },
+            "specExtensions": {
+              "widgetBackgroundColor": {
+                "light": "#FFFFFF"
+              },
+              "widgetBorderColor": {
+                "light": "#B8BFC4"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 17,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "3c6f1cd6",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "924cc311",
+                  "fields": [
+                    {
+                      "name": "sum(TOTAL_SALE_TAX)",
+                      "expression": "SUM(`TOTAL_SALE_TAX`)"
+                    },
+                    {
+                      "name": "PRODUCT_DESC",
+                      "expression": "`PRODUCT_DESC`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Top 10 -  Productos más vendidos"
+              },
+              "mark": {
+                "colors": [
+                  "#FFA500",
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 2
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 3
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 4
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 5
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 6
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 7
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 8
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 9
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 10
+                  }
+                ]
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(TOTAL_SALE_TAX)",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  },
+                  "axis": {
+                    "hideTitle": true
+                  },
+                  "displayName": "Total Venta",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "PRODUCT_DESC",
+                  "axis": {
+                    "hideTitle": true
+                  },
+                  "displayName": "Producto",
+                  "scale": {
+                    "type": "categorical",
+                    "categorySize": {
+                      "type": "number-of-categories",
+                      "number": 10
+                    },
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": true,
+                  "text": {
+                    "fieldName": "sum(TOTAL_SALE_TAX)",
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "compact",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    },
+                    "displayName": "Total Venta"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "fb66ad4d",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "10b834de",
+                  "fields": [
+                    {
+                      "name": "sum(TOTAL_SALE_TAX)",
+                      "expression": "SUM(`TOTAL_SALE_TAX`)"
+                    },
+                    {
+                      "name": "SUPPLIER_NAME",
+                      "expression": "`SUPPLIER_NAME`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Top 5 - Proveedores con más ventas "
+              },
+              "mark": {
+                "colors": [
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 2
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 2
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 3
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 4
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 5
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 6
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 7
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 8
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 9
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 10
+                  }
+                ]
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(TOTAL_SALE_TAX)",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  },
+                  "axis": {
+                    "hideTitle": true
+                  },
+                  "displayName": "Total Venta",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "SUPPLIER_NAME",
+                  "axis": {
+                    "hideTitle": true
+                  },
+                  "displayName": "Proveedor",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 11,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "07d4cedb",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6efa5ddc",
+                  "fields": [
+                    {
+                      "name": "avg(AVG_TICKET)",
+                      "expression": "AVG(`AVG_TICKET`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "showDescription": false,
+                "title": "Ticket Promedio",
+                "description": "Unidades vendidas",
+                "headerAlignment": "center"
+              },
+              "style": {
+                "fontColor": {
+                  "light": "#FFFFFF"
+                }
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "avg(AVG_TICKET)",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  },
+                  "style": {
+                    "fontSize": 20,
+                    "color": {
+                      "themeColorType": "canvasBackgroundColor"
+                    },
+                    "bold": true
+                  }
+                }
+              }
+            },
+            "specExtensions": {
+              "widgetBackgroundColor": {
+                "light": "#1E90FF"
+              },
+              "widgetBorderColor": {
+                "light": "#1E90FF"
+              }
+            }
+          },
+          "position": {
+            "x": 5,
+            "y": 0,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "7c2de3d9",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6efa5ddc",
+                  "fields": [
+                    {
+                      "name": "weekly(BUSINESS_DATE)",
+                      "expression": "DATE_TRUNC(\"WEEK\", `BUSINESS_DATE`)"
+                    },
+                    {
+                      "name": "sum(TOTAL_SALE_TAX)",
+                      "expression": "SUM(`TOTAL_SALE_TAX`)"
+                    },
+                    {
+                      "name": "sum(GROSS_MARGIN)",
+                      "expression": "SUM(`GROSS_MARGIN`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "mark": {
+                "colors": [
+                  "#1E90FF",
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 3
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 5
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 6
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 7
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 8
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 9
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 10
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 9
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 10
+                  }
+                ],
+                "size": 0
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Ventas semanales vs Margen Bruto (M)"
+              },
+              "widgetType": "combo",
+              "encodings": {
+                "color": {
+                  "legend": {
+                    "hideTitle": false
+                  }
+                },
+                "y": {
+                  "primary": {
+                    "fields": [
+                      {
+                        "fieldName": "sum(TOTAL_SALE_TAX)",
+                        "displayName": "Total Ventas"
+                      }
+                    ],
+                    "scale": {
+                      "type": "quantitative"
+                    },
+                    "axis": {
+                      "hideGrid": true,
+                      "hideLabels": false,
+                      "hideTitle": false,
+                      "title": "Ventas"
+                    }
+                  },
+                  "secondary": {
+                    "fields": [
+                      {
+                        "fieldName": "sum(GROSS_MARGIN)",
+                        "displayName": "Margen Bruto"
+                      }
+                    ],
+                    "scale": {
+                      "type": "quantitative"
+                    },
+                    "axis": {
+                      "title": "Margen Bruto"
+                    },
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "compact",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
+                  }
+                },
+                "x": {
+                  "fieldName": "weekly(BUSINESS_DATE)",
+                  "axis": {
+                    "hideTitle": true
+                  },
+                  "displayName": "Fecha",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "ab092aa5",
+            "multilineTextboxSpec": {
+              "lines": [
+                "<span style=\"text-align:right;display:block\"><span style=\"font-size:11px\">Todas las ventas incluyen impuestos</span></span>\n",
+                "\n",
+                "<span style=\"text-align:right;display:block;\">**Nota:** Para efectos de esta prueba técnica, se asume una tasa de cambio ficticia de 1 USD = 1 VES, con el fin de evitar distorsión en los totales . En un escenario real, se usaría la tasa de cambio diaria correspondiente.\r</span>"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 24,
+            "width": 6,
+            "height": 2
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
+    },
+    {
+      "name": "a0abd2ec",
+      "displayName": "Global Filters",
+      "layout": [
+        {
+          "widget": {
+            "name": "rango-de-fechas",
+            "queries": [
+              {
+                "name": "dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f1045cc93c1384b5261cd3fcdef9bd_BUSINESS_DATE",
+                "query": {
+                  "datasetName": "6efa5ddc",
+                  "fields": [
+                    {
+                      "name": "BUSINESS_DATE",
+                      "expression": "`BUSINESS_DATE`"
+                    },
+                    {
+                      "name": "BUSINESS_DATE_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f1048e2ea31b1daa35977463e9ec70_fecha",
+                "query": {
+                  "datasetName": "6cb1963d",
+                  "parameters": [
+                    {
+                      "name": "fecha",
+                      "keyword": "fecha"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f104691ad419398b8a821f19eab9f2_fecha",
+                "query": {
+                  "datasetName": "924cc311",
+                  "parameters": [
+                    {
+                      "name": "fecha",
+                      "keyword": "fecha"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f10496d8b918c78ebeedb6d371d537_fecha",
+                "query": {
+                  "datasetName": "10b834de",
+                  "parameters": [
+                    {
+                      "name": "fecha",
+                      "keyword": "fecha"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "selection": {
+                "defaultSelection": {
+                  "range": {
+                    "dataType": "DATE",
+                    "min": {
+                      "value": "2025-07-01T00:00:00.000"
+                    },
+                    "max": {
+                      "value": "2025-09-30T00:00:00.000"
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Rango de fechas"
+              },
+              "widgetType": "filter-date-range-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "BUSINESS_DATE",
+                    "queryName": "dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f1045cc93c1384b5261cd3fcdef9bd_BUSINESS_DATE"
+                  },
+                  {
+                    "parameterName": "fecha",
+                    "queryName": "parameter_dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f1048e2ea31b1daa35977463e9ec70_fecha"
+                  },
+                  {
+                    "parameterName": "fecha",
+                    "queryName": "parameter_dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f104691ad419398b8a821f19eab9f2_fecha"
+                  },
+                  {
+                    "parameterName": "fecha",
+                    "queryName": "parameter_dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f10496d8b918c78ebeedb6d371d537_fecha"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "region",
+            "queries": [
+              {
+                "name": "dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f1045cc93c1384b5261cd3fcdef9bd_STORE_REGION",
+                "query": {
+                  "datasetName": "6efa5ddc",
+                  "fields": [
+                    {
+                      "name": "STORE_REGION",
+                      "expression": "`STORE_REGION`"
+                    },
+                    {
+                      "name": "STORE_REGION_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f1048e2ea31b1daa35977463e9ec70_region",
+                "query": {
+                  "datasetName": "6cb1963d",
+                  "parameters": [
+                    {
+                      "name": "region",
+                      "keyword": "region"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f104691ad419398b8a821f19eab9f2_region",
+                "query": {
+                  "datasetName": "924cc311",
+                  "parameters": [
+                    {
+                      "name": "region",
+                      "keyword": "region"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f10496d8b918c78ebeedb6d371d537_region",
+                "query": {
+                  "datasetName": "10b834de",
+                  "parameters": [
+                    {
+                      "name": "region",
+                      "keyword": "region"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Region"
+              },
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "STRING",
+                    "values": [
+                      {
+                        "value": "Capital"
+                      },
+                      {
+                        "value": "Centro"
+                      },
+                      {
+                        "value": "Occidente"
+                      },
+                      {
+                        "value": "Oriente"
+                      }
+                    ]
+                  }
+                }
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "STORE_REGION",
+                    "queryName": "dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f1045cc93c1384b5261cd3fcdef9bd_STORE_REGION"
+                  },
+                  {
+                    "parameterName": "region",
+                    "queryName": "parameter_dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f1048e2ea31b1daa35977463e9ec70_region"
+                  },
+                  {
+                    "parameterName": "region",
+                    "queryName": "parameter_dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f104691ad419398b8a821f19eab9f2_region"
+                  },
+                  {
+                    "parameterName": "region",
+                    "queryName": "parameter_dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f10496d8b918c78ebeedb6d371d537_region"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "formato-de-tienda",
+            "queries": [
+              {
+                "name": "dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f1045cc93c1384b5261cd3fcdef9bd_STORE_FORMAT",
+                "query": {
+                  "datasetName": "6efa5ddc",
+                  "fields": [
+                    {
+                      "name": "STORE_FORMAT",
+                      "expression": "`STORE_FORMAT`"
+                    },
+                    {
+                      "name": "STORE_FORMAT_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f1048e2ea31b1daa35977463e9ec70_format",
+                "query": {
+                  "datasetName": "6cb1963d",
+                  "parameters": [
+                    {
+                      "name": "format",
+                      "keyword": "format"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f104691ad419398b8a821f19eab9f2_format",
+                "query": {
+                  "datasetName": "924cc311",
+                  "parameters": [
+                    {
+                      "name": "format",
+                      "keyword": "format"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f10496d8b918c78ebeedb6d371d537_format",
+                "query": {
+                  "datasetName": "10b834de",
+                  "parameters": [
+                    {
+                      "name": "format",
+                      "keyword": "format"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Formato de tienda"
+              },
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "STRING",
+                    "values": [
+                      {
+                        "value": "Express"
+                      },
+                      {
+                        "value": "Mega"
+                      },
+                      {
+                        "value": "Plus"
+                      },
+                      {
+                        "value": "Super"
+                      }
+                    ]
+                  }
+                }
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "STORE_FORMAT",
+                    "queryName": "dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f1045cc93c1384b5261cd3fcdef9bd_STORE_FORMAT"
+                  },
+                  {
+                    "parameterName": "format",
+                    "queryName": "parameter_dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f1048e2ea31b1daa35977463e9ec70_format"
+                  },
+                  {
+                    "parameterName": "format",
+                    "queryName": "parameter_dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f104691ad419398b8a821f19eab9f2_format"
+                  },
+                  {
+                    "parameterName": "format",
+                    "queryName": "parameter_dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f10496d8b918c78ebeedb6d371d537_format"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 4,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "moneda",
+            "queries": [
+              {
+                "name": "dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f1045cc93c1384b5261cd3fcdef9bd_CURRENCY",
+                "query": {
+                  "datasetName": "6efa5ddc",
+                  "fields": [
+                    {
+                      "name": "CURRENCY",
+                      "expression": "`CURRENCY`"
+                    },
+                    {
+                      "name": "CURRENCY_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f1048e2ea31b1daa35977463e9ec70_currency",
+                "query": {
+                  "datasetName": "6cb1963d",
+                  "parameters": [
+                    {
+                      "name": "currency",
+                      "keyword": "currency"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f104691ad419398b8a821f19eab9f2_currency",
+                "query": {
+                  "datasetName": "924cc311",
+                  "parameters": [
+                    {
+                      "name": "currency",
+                      "keyword": "currency"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f10496d8b918c78ebeedb6d371d537_currency",
+                "query": {
+                  "datasetName": "10b834de",
+                  "parameters": [
+                    {
+                      "name": "currency",
+                      "keyword": "currency"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Moneda"
+              },
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "STRING",
+                    "values": [
+                      {
+                        "value": "USD"
+                      },
+                      {
+                        "value": "VES"
+                      }
+                    ]
+                  }
+                }
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "CURRENCY",
+                    "queryName": "dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f1045cc93c1384b5261cd3fcdef9bd_CURRENCY"
+                  },
+                  {
+                    "parameterName": "currency",
+                    "queryName": "parameter_dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f1048e2ea31b1daa35977463e9ec70_currency"
+                  },
+                  {
+                    "parameterName": "currency",
+                    "queryName": "parameter_dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f104691ad419398b8a821f19eab9f2_currency"
+                  },
+                  {
+                    "parameterName": "currency",
+                    "queryName": "parameter_dashboards/01f1042d5ba01e59a9dac0e71c2cc239/datasets/01f10496d8b918c78ebeedb6d371d537_currency"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 6,
+            "width": 1,
+            "height": 2
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_GLOBAL_FILTERS"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "canvasBackgroundColor": {
+        "light": "#F6FAFB",
+        "dark": "#1B1F23"
+      },
+      "widgetBackgroundColor": {
+        "light": "#FFFFFF",
+        "dark": "#2A2F35"
+      },
+      "widgetBorderColor": {
+        "light": "#D7E1E9",
+        "dark": "#3C444C"
+      },
+      "fontColor": {
+        "light": "#374151",
+        "dark": "#E4E9EE"
+      },
+      "selectionColor": {
+        "light": "#5FA8D3",
+        "dark": "#5FA8D3"
+      },
+      "visualizationColors": [
+        "#32CD32",
+        "#1E90FF",
+        "#FFA500",
+        "#32CD32",
+        "#4682B4",
+        "#89C7A8",
+        "#6EAD80",
+        "#589F60",
+        "#478743",
+        "#356C2A"
+      ],
+      "widgetHeaderAlignment": "CENTER",
+      "fontFamily": "Arial"
+    },
+    "applyModeEnabled": false
+  }
+}
